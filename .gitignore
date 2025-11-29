@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+book.html
+discover_links.py
+inspect_article.py
