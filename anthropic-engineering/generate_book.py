@@ -109,10 +109,14 @@ def generate_book():
 
     # Generate HTML
     
+    # Get absolute path to cover image
+    import os
+    cover_path = os.path.abspath('cover.png')
+    
     # Cover Page
-    cover_html = """
+    cover_html = f"""
     <div style="text-align: center; page-break-after: always; display: flex; flex-direction: column; justify-content: center; height: 100vh;">
-        <img src="cover.png" style="max-width: 100%; max-height: 50vh; margin-bottom: 50px;">
+        <img src="file://{cover_path}" style="max-width: 80%; max-height: 60vh; margin: 0 auto 30px auto;">
         <h1 style="font-size: 48px; margin-bottom: 20px;">Anthropic Engineering Blog</h1>
         <p style="font-size: 24px; color: #666;">A collection of engineering articles</p>
         <p style="margin-top: 100px; font-size: 14px; color: #999;">Generated Book</p>
