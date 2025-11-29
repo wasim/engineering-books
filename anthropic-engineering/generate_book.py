@@ -67,46 +67,80 @@ def process_article(url, index):
             if a.get('href'):
                 a['href'] = urljoin(url, a['href'])
         
-        # Add a title header if it's missing from the article body (sometimes it's in the hero section)
-        # Check if h1 exists in content
-        if not content.find('h1'):
-            # Try to find h1 in the page
-            h1 = soup.find('h1')
-            if h1:
+        # Extract title
+        title = "Untitled Article"
+        h1 = content.find('h1')
+        if h1:
+            title = h1.get_text().strip()
+        else:
+            # Try to find h1 in the page if not in content
+            page_h1 = soup.find('h1')
+            if page_h1:
+                title = page_h1.get_text().strip()
                 # Prepend h1 to content
                 new_h1 = soup.new_tag('h1')
-                new_h1.string = h1.get_text()
+                new_h1.string = title
                 content.insert(0, new_h1)
 
-        return str(content), stylesheets
+        return str(content), stylesheets, title
 
     except Exception as e:
         print(f"  ERROR processing {url}: {e}")
-        return None, []
+        return None, [], "Error"
 
 def generate_book():
     links = get_article_links()
     
-    all_content = []
+    articles_data = []
     all_stylesheets = set()
     
-    # Add a cover page
-    cover_html = """
-    <div style="text-align: center; margin-top: 200px;">
-        <h1 style="font-size: 48px;">Anthropic Engineering Blog</h1>
-        <p style="font-size: 24px;">A collection of engineering articles</p>
-        <p style="margin-top: 100px;">Generated Book</p>
-    </div>
-    <div style="page-break-after: always;"></div>
-    """
-    all_content.append(cover_html)
-    
+    # Process articles
     for i, link in enumerate(links):
-        content, stylesheets = process_article(link, i)
+        content, stylesheets, title = process_article(link, i)
         if content:
             all_stylesheets.update(stylesheets)
-            all_content.append(content)
-            all_content.append('<div style="page-break-after: always;"></div>')
+            # Create a unique ID for the article
+            article_id = f"article-{i}"
+            articles_data.append({
+                "title": title,
+                "content": content,
+                "id": article_id
+            })
+
+    # Generate HTML
+    
+    # Cover Page
+    cover_html = """
+    <div style="text-align: center; page-break-after: always; display: flex; flex-direction: column; justify-content: center; height: 100vh;">
+        <img src="cover.png" style="max-width: 100%; max-height: 50vh; margin-bottom: 50px;">
+        <h1 style="font-size: 48px; margin-bottom: 20px;">Anthropic Engineering Blog</h1>
+        <p style="font-size: 24px; color: #666;">A collection of engineering articles</p>
+        <p style="margin-top: 100px; font-size: 14px; color: #999;">Generated Book</p>
+    </div>
+    """
+    
+    # Table of Contents
+    toc_items = []
+    for article in articles_data:
+        toc_items.append(f'<li><a href="#{article["id"]}">{article["title"]}</a></li>')
+    
+    toc_html = f"""
+    <div style="page-break-after: always;">
+        <h1>Table of Contents</h1>
+        <ul style="list-style-type: none; padding: 0;">
+            {''.join(toc_items)}
+        </ul>
+    </div>
+    """
+    
+    final_content = [cover_html, toc_html]
+    
+    for article in articles_data:
+        # Inject ID into the first header or a wrapper div
+        # We'll wrap the content in a div with the ID
+        wrapped_content = f'<div id="{article["id"]}">{article["content"]}</div>'
+        final_content.append(wrapped_content)
+        final_content.append('<div style="page-break-after: always;"></div>')
     
     full_html = f"""
     <!DOCTYPE html>
@@ -116,15 +150,18 @@ def generate_book():
         <title>Anthropic Engineering Blog</title>
         {''.join([f'<link rel="stylesheet" href="{css}">' for css in all_stylesheets])}
         <style>
+            @page {{ margin: 2cm; }}
             body {{ font-family: sans-serif; }}
             img {{ max-width: 100%; height: auto; }}
             pre {{ white-space: pre-wrap; word-wrap: break-word; background: #f5f5f5; padding: 10px; }}
-            /* Ensure code blocks don't overflow */
             code {{ word-break: break-all; }}
+            a {{ text-decoration: none; color: #000; }}
+            a:hover {{ text-decoration: underline; }}
+            ul li {{ margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }}
         </style>
     </head>
     <body>
-        {''.join(all_content)}
+        {''.join(final_content)}
     </body>
     </html>
     """
